@@ -19,7 +19,6 @@ import {
   UsersIcon
 } from '@heroicons/react/24/outline';
 import { GitBranch } from "lucide-react";
-import GitHubStatsSection from '../components/common/GitHubStatsSection';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import Footer from './Footer';
@@ -403,8 +402,6 @@ const AboutPage = () => {
         </div>
       </section>
 
-      {/* GitHub Stats Section - Using the API Component */}
-      <GitHubStatsSection />
 
       {/* Core Values Section */}
       <section className="py-20 bg-gray-50 dark:bg-gray-900">
