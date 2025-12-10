@@ -35,7 +35,7 @@ export default function Footer() {
   {
     title: "Resources",
     links: [
-      { name: "Blog", href: "/blog", isRoute: true },
+      // { name: "Blog", href: "/blog", isRoute: true },
       { name: "Help Center", href: "#", isRoute: false },
       { name: "Community", href: "#", isRoute: false },
       { name: "Webinars", href: "#", isRoute: false },
