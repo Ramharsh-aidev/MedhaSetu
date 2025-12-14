@@ -6,6 +6,30 @@ const morgan= require("morgan")
 const dotenv= require("dotenv")
 const connectDB = require("./config/db")
 
+// Import middleware
+const { notFound, errorHandler } = require('./middleware/error');
+
+// Import controllers
+const { handleSocketConnection } = require('./controllers/socketController');
+const WebRTCSignaling = require('./controllers/webRTCController');
+const { checkAndSendReminders } = require('./controllers/medicineReminderController');
+
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const videoCallRoutes = require('./routes/videoCallRoutes');
+const medicineReminderRoutes = require('./routes/medicineReminderRoutes');
+const healthLogRoutes = require('./routes/healthLogRoutes');
+const aiHealthAssistantRoutes = require('./routes/aiHealthAssistantRoutes');
+const aiSchedulerRoutes = require('./routes/aiSchedulerRoutes');
+const aiAppointmentRoutes = require('./routes/aiAppointmentRoutes');
+const emergencyAppointmentRoutes = require('./routes/emergencyAppointmentRoutes');
+const appointmentStatusRoutes = require('./routes/appointmentStatusRoutes');
+const serverTimeRoutes = require('./routes/serverTimeRoutes');
 
 dotenv.config();
 connectDB();
@@ -56,7 +80,22 @@ app.get("/health", (req, res) => {
     res.json({status: "backend is running"});
 });
 
-
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/doctors', doctorRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/video-call', videoCallRoutes);
+app.use('/api/medicine-reminders', medicineReminderRoutes);
+app.use('/api/health-logs', healthLogRoutes);
+app.use('/api/ai-health-assistant', aiHealthAssistantRoutes);
+app.use('/api/ai-scheduler', aiSchedulerRoutes);
+app.use('/api/ai-appointments', aiAppointmentRoutes);
+app.use('/api/emergency-appointments', emergencyAppointmentRoutes);
+app.use('/api/appointment-status', appointmentStatusRoutes);
+app.use('/api/server-time', serverTimeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
