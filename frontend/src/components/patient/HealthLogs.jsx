@@ -2,69 +2,10 @@ import React, { useMemo, useState, useEffect } from "react";
 import { PlusIcon, PencilSquareIcon, TrashIcon, FunnelIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth } from "../../contexts/AuthContext";
 
 import { predefinedTypes, vitalTypes } from '../../data/vitals.js'
 import {VitalInput} from "../../data/vitalInput.jsx"
-// --- Dummy initial data
-const initialVitals = [
-  {
-    id: 1,
-    date: "2024-07-10",
-    type: "Blood Pressure",
-    value: "120/78",
-    unit: "mmHg",
-    status: "normal",
-  },
-  {
-    id: 2,
-    date: "2024-07-09",
-    type: "Heart Rate",
-    value: "88",
-    unit: "bpm",
-    status: "elevated",
-  },
-  {
-    id: 3,
-    date: "2024-07-08",
-    type: "Temperature",
-    value: "99.1",
-    unit: "°F",
-    status: "normal",
-  },
-  {
-    id: 4,
-    date: "2024-07-06",
-    type: "Weight",
-    value: "70.5",
-    unit: "kg",
-    status: "normal",
-  },
-  {
-    id: 5,
-    date: "2024-07-05",
-    type: "Blood Sugar",
-    value: "115",
-    unit: "mg/dL",
-    status: "elevated",
-  },
-];
-
-const initialSymptoms = [
-  {
-    id: 101,
-    date: "2024-07-09",
-    symptom: "Headache",
-    severity: "mild",
-    notes: "After long meeting",
-  },
-  {
-    id: 102,
-    date: "2024-07-05",
-    symptom: "Fatigue",
-    severity: "moderate",
-    notes: "Tired in morning",
-  },
-];
 
 let uid = 200;
 const nextId = () => ++uid;
@@ -139,10 +80,12 @@ const toCSV = (rows) => {
 };
 
 const HealthLogs = () => {
+  const { getAuthToken } = useAuth();
   const [activeTab, setActiveTab] = useState("vitals");
-  const [vitals, setVitals] = useState(initialVitals);
-  const [symptoms, setSymptoms] = useState(initialSymptoms);
+  const [vitals, setVitals] = useState([]);
+  const [symptoms, setSymptoms] = useState([]);
   const [customTypes, setCustomTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
@@ -166,6 +109,37 @@ const HealthLogs = () => {
   const [searchText, setSearchText] = useState('')
 
   const allVitalTypes = [...vitalTypes, ...customTypes]; // inside component
+
+  // Fetch health logs from backend
+  const fetchHealthLogs = async () => {
+    try {
+      setLoading(true);
+      const token = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setVitals(data.data.vitals || []);
+        setSymptoms(data.data.symptoms || []);
+      } else {
+        console.error('Failed to fetch health logs');
+      }
+    } catch (error) {
+      console.error('Error fetching health logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchHealthLogs();
+  }, []);
 
 const filteredVitals = useMemo(() => {
   const from = parseDateKey(dateFrom);
@@ -278,87 +252,169 @@ const filteredVitals = useMemo(() => {
     setEditing(null);
   };
 
-  const handleSave = () => {
-  if (form.kind === 'vital') {
-    if (!form.type || !form.date || !form.value) {
-      alert('Please provide date, type and value for the vital sign.');
-      return;
-    }
+  const handleSave = async () => {
+    try {
+      const token = await getAuthToken();
+      
+      if (form.kind === 'vital') {
+        if (!form.type || !form.date || !form.value) {
+          alert('Please provide date, type and value for the vital sign.');
+          return;
+        }
 
-    // If type is "Other", use customType and customUnit (optional)
-    const finalType = form.type === 'Other' ? form.customType : form.type;
-    const finalUnit = form.type === 'Other' ? (form.customUnit || "") : form.unit;
+        // If type is "Other", use customType and customUnit (optional)
+        const finalType = form.type === 'Other' ? form.customType : form.type;
+        const finalUnit = form.type === 'Other' ? (form.customUnit || "") : form.unit;
 
-    if (!finalType) {
-      alert('Please enter a custom vital type.');
-      return;
-    }
- 
-    if (form.type === 'Other' && finalType && !customTypes.includes(finalType)) {
-      setCustomTypes(prev => [...prev, finalType]);
-    }
+        if (!finalType) {
+          alert('Please enter a custom vital type.');
+          return;
+        }
+     
+        if (form.type === 'Other' && finalType && !customTypes.includes(finalType)) {
+          setCustomTypes(prev => [...prev, finalType]);
+        }
 
-    const auto = detectStatus({ type: finalType, value: form.value });
-    const status = form.status && form.status !== 'auto' ? form.status : auto;
+        const auto = detectStatus({ type: finalType, value: form.value });
+        const status = form.status && form.status !== 'auto' ? form.status : auto;
 
-    if (editing) {
-      setVitals(prev => prev.map(v => 
-        v.id === editing.id 
-          ? { ...v, date: form.date, type: finalType, value: form.value, unit: finalUnit, status } 
-          : v
-      ));
-    } else {
-      const newEntry = { 
-        id: nextId(), 
-        date: form.date, 
-        type: finalType, 
-        value: form.value, 
-        unit: finalUnit, 
-        status 
-      };
-      setVitals(prev => [newEntry, ...prev]); 
-    }
-    setForm({ kind: 'vital', date: '', type: '', value: '', unit: '', customType: '', customUnit: '', status: 'auto' });
-    setEditing(null);
-    setModalOpen(false);
+        const payload = {
+          kind: 'vital',
+          type: finalType,
+          value: form.value,
+          unit: finalUnit,
+          status,
+          date: form.date
+        };
 
-    } else {
-      if (!form.symptom || !form.date) {
-        alert("Please provide symptom and date.");
-        return;
-      }
-      if (editing) {
-        setSymptoms((prev) =>
-          prev.map((s) =>
-            s.id === editing.id
-              ? {
-                  ...s,
-                  date: form.date,
-                  symptom: form.symptom,
-                  severity: form.severity,
-                  notes: form.notes,
-                }
-              : s
-          )
-        );
+        if (editing) {
+          // Update existing vital
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs/${editing.id}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setVitals(prev => prev.map(v => 
+              v.id === editing.id ? result.data : v
+            ));
+          } else {
+            alert('Failed to update vital sign');
+            return;
+          }
+        } else {
+          // Create new vital
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setVitals(prev => [result.data, ...prev]);
+          } else {
+            alert('Failed to create vital sign');
+            return;
+          }
+        }
+        setForm({ kind: 'vital', date: '', type: '', value: '', unit: '', customType: '', customUnit: '', status: 'auto' });
+        setEditing(null);
+        setModalOpen(false);
+
       } else {
-        const newSym = {
-          id: nextId(),
-          date: form.date,
+        // Handle symptom
+        if (!form.symptom || !form.date) {
+          alert("Please provide symptom and date.");
+          return;
+        }
+        
+        const payload = {
+          kind: 'symptom',
           symptom: form.symptom,
           severity: form.severity,
           notes: form.notes,
+          date: form.date
         };
-        setSymptoms((prev) => [newSym, ...prev]);
+        
+        if (editing) {
+          // Update existing symptom
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs/${editing.id}`, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setSymptoms(prev => prev.map(s => 
+              s.id === editing.id ? result.data : s
+            ));
+          } else {
+            alert('Failed to update symptom');
+            return;
+          }
+        } else {
+          // Create new symptom
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setSymptoms(prev => [result.data, ...prev]);
+          } else {
+            alert('Failed to create symptom');
+            return;
+          }
+        }
       }
+      closeModal();
+    } catch (error) {
+      console.error('Error saving health log:', error);
+      alert('An error occurred while saving. Please try again.');
     }
-    closeModal();
   };
 
-  const handleDelete = (kind, id) => {
+  const handleDelete = async (kind, id) => {
     if (!window.confirm("Delete this entry? This cannot be undone.")) return;
-    if (kind === "vital") setVitals((prev) => prev.filter((v) => v.id !== id));
-    else setSymptoms((prev) => prev.filter((s) => s.id !== id));
+    
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/health-logs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        if (kind === "vital") setVitals((prev) => prev.filter((v) => v.id !== id));
+        else setSymptoms((prev) => prev.filter((s) => s.id !== id));
+      } else {
+        alert('Failed to delete entry');
+      }
+    } catch (error) {
+      console.error('Error deleting health log:', error);
+      alert('An error occurred while deleting. Please try again.');
+    }
   };
 
   const exportCSV = () => {
@@ -627,11 +683,15 @@ const filteredVitals = useMemo(() => {
 
       {/* Content container */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        {activeTab === "vitals" && (
+        {loading ? (
+          <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+            Loading health logs...
+          </div>
+        ) : activeTab === "vitals" ? (
           <div className="p-6 space-y-4">
             {filteredVitals.length === 0 && (
               <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No vitals match your filters.
+                {vitals.length === 0 ? "No vitals recorded yet. Click 'Add Entry' to start tracking." : "No vitals match your filters."}
               </div>
             )}
             {filteredVitals.map((v) => (
@@ -688,13 +748,11 @@ const filteredVitals = useMemo(() => {
               </div>
             ))}
           </div>
-        )}
-
-        {activeTab === "symptoms" && (
+        ) : (
           <div className="p-6 space-y-4">
             {filteredSymptoms.length === 0 && (
               <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No symptoms match your filters.
+                {symptoms.length === 0 ? "No symptoms recorded yet. Click 'Add Entry' to start tracking." : "No symptoms match your filters."}
               </div>
             )}
             {filteredSymptoms.map((s) => (
