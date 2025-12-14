@@ -6,7 +6,65 @@ import autoTable from "jspdf-autotable";
 import { predefinedTypes, vitalTypes } from '../../data/vitals.js'
 import {VitalInput} from "../../data/vitalInput.jsx"
 // --- Dummy initial data
+const initialVitals = [
+  {
+    id: 1,
+    date: "2024-07-10",
+    type: "Blood Pressure",
+    value: "120/78",
+    unit: "mmHg",
+    status: "normal",
+  },
+  {
+    id: 2,
+    date: "2024-07-09",
+    type: "Heart Rate",
+    value: "88",
+    unit: "bpm",
+    status: "elevated",
+  },
+  {
+    id: 3,
+    date: "2024-07-08",
+    type: "Temperature",
+    value: "99.1",
+    unit: "°F",
+    status: "normal",
+  },
+  {
+    id: 4,
+    date: "2024-07-06",
+    type: "Weight",
+    value: "70.5",
+    unit: "kg",
+    status: "normal",
+  },
+  {
+    id: 5,
+    date: "2024-07-05",
+    type: "Blood Sugar",
+    value: "115",
+    unit: "mg/dL",
+    status: "elevated",
+  },
+];
 
+const initialSymptoms = [
+  {
+    id: 101,
+    date: "2024-07-09",
+    symptom: "Headache",
+    severity: "mild",
+    notes: "After long meeting",
+  },
+  {
+    id: 102,
+    date: "2024-07-05",
+    symptom: "Fatigue",
+    severity: "moderate",
+    notes: "Tired in morning",
+  },
+];
 
 let uid = 200;
 const nextId = () => ++uid;
