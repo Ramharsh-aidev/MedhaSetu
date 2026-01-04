@@ -235,3 +235,4 @@ This project is proprietary software developed by Ramharsh Sanjay Dandekar. All 
 ⚡ **Built with passion for healthcare innovation and modern technology**
 
 🏥 *Making healthcare accessible, efficient, and user-friendly for everyone*
+
